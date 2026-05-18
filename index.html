@@ -137,6 +137,7 @@
 
         .inv-slot.selected { 
             border: 3px solid #ff00ff;
+            box-shadow: 0 0 5px #ff00ff;
         }
 
         .item-count {
@@ -148,6 +149,40 @@
             font-size: 18px;
             font-weight: bold;
             pointer-events: none;
+        }
+
+        /* Візуалізація предмета в руці */
+        .held-item-display {
+            position: fixed;
+            bottom: 100px;
+            right: 100px;
+            width: 64px;
+            height: 64px;
+            background: #8b8b8b;
+            border: 3px solid #ff00ff;
+            border-top-color: #fff;
+            border-left-color: #fff;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background-size: cover;
+            image-rendering: pixelated;
+            z-index: 1000;
+            box-shadow: 0 0 20px #ff00ff;
+        }
+
+        .held-item-display.active {
+            display: flex;
+        }
+
+        .held-item-count {
+            position: absolute;
+            bottom: 2px;
+            right: 4px;
+            color: #ff00ff;
+            text-shadow: 2px 2px 0 #000;
+            font-size: 20px;
+            font-weight: bold;
         }
 
         .controls {
@@ -184,6 +219,13 @@
             opacity: 0.5;
             cursor: not-allowed;
         }
+
+        .info {
+            margin-top: 10px;
+            color: #404040;
+            font-size: 16px;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -203,15 +245,35 @@
             <button class="btn" onclick="clearGrid()">🗑️ Очистити</button>
             <button class="btn" id="collectBtn" onclick="collectResult()" disabled>🎁 Забрати</button>
         </div>
+        <div class="info" id="infoText">Клікни на предмет щоб взяти</div>
     </div>
 
     <div class="player-inventory" id="inventory"></div>
 
+    <!-- Відображення предмета в руці -->
+    <div class="held-item-display" id="heldItemDisplay">
+        <span class="held-item-count" id="heldItemCount"></span>
+    </div>
+
     <script>
-        // 🎒 ІНВЕНТАР
-        let heldItem = null;
+        // 🎒 ІНВЕНТАР З МАКСИМАЛЬНИМИ СТЕКАМИ
+        const MAX_STACK = {
+            'log': 64,
+            'planks': 64,
+            'stick': 64,
+            'cobble': 64,
+            'iron': 64,
+            'diamond': 64,
+            'coal': 64,
+            'sword': 1,
+            'pickaxe': 1,
+            'apple': 64,
+            'bread': 64
+        };
+
+        let heldItem = null; // { id, name, texture, count, maxStack }
         let playerInv = [
-            { id: 'log', name: 'Дуб', texture: 'https://abrakadabra.fun/uploads/posts/2021-12/1639881942_8-abrakadabra-fun-p-doski-mainkraft-tekstura-8.png', count: 64 },
+            { id: 'log', name: 'Дуб', texture: 'https://abrakadabra.fun/uploads/posts/2021-12/1639881942_8-abrakadabra-fun-p-doski-mainkraft-tekstura-8.png', count: 64, maxStack: 64 },
             null, null, null, null, null, null, null, null, null,
             null, null, null, null, null, null, null, null, null, null,
             null, null, null, null, null, null, null, null, null, null
@@ -221,17 +283,16 @@
         const recipes = {
             'log_to_planks': {
                 input: 'log',
-                output: { id: 'planks', name: 'Дошка', texture: 'https://grizly.club/uploads/posts/2023-01/1672853506_grizly-club-p-tekstura-dereva-pikselnaya-5.png', count: 4 },
+                output: { id: 'planks', name: 'Дошка', texture: 'https://grizly.club/uploads/posts/2023-01/1672853506_grizly-club-p-tekstura-dereva-pikselnaya-5.png', count: 4, maxStack: 64 },
                 shapeless: true
             },
             'planks_to_sticks': {
                 input: 'planks',
-                output: { id: 'stick', name: 'Палички', texture: 'https://example.com/stick.png', count: 4 },
+                output: { id: 'stick', name: 'Палички', texture: 'https://example.com/stick.png', count: 4, maxStack: 64 },
                 shapeless: true
             }
         };
 
-        // Поточний результат
         let currentResult = null;
 
         // --- ІНІЦІАЛІЗАЦІЯ ---
@@ -239,6 +300,9 @@
         const outputEl = document.getElementById('output');
         const inventoryEl = document.getElementById('inventory');
         const collectBtn = document.getElementById('collectBtn');
+        const heldItemDisplay = document.getElementById('heldItemDisplay');
+        const heldItemCountEl = document.getElementById('heldItemCount');
+        const infoText = document.getElementById('infoText');
 
         // Створення сітки
         for(let i=0; i<9; i++) {
@@ -247,6 +311,11 @@
             slot.dataset.index = i;
             slot.onclick = () => handleGridClick(i);
             gridEl.appendChild(slot);
+        }
+
+        // Допоміжна функція - отримати макс стек
+        function getMaxStack(itemId) {
+            return MAX_STACK[itemId] || 64;
         }
 
         // Відображення інвентарю
@@ -275,27 +344,63 @@
             });
         }
 
+        // Оновлення відображення предмета в руці
+        function updateHeldItemDisplay() {
+            if(heldItem) {
+                heldItemDisplay.style.backgroundImage = `url(${heldItem.texture})`;
+                heldItemCountEl.textContent = heldItem.count;
+                heldItemDisplay.classList.add('active');
+                infoText.textContent = `В руці: ${heldItem.name} x${heldItem.count}`;
+            } else {
+                heldItemDisplay.classList.remove('active');
+                infoText.textContent = 'Клікни на предмет щоб взяти';
+            }
+        }
+
         renderInventory();
         updateOutput();
+        updateHeldItemDisplay();
 
         // --- ЛОГІКА ---
         function handleInventoryClick(index) {
             let item = playerInv[index];
             
+            // Якщо рука пуста - беремо предмет
             if(!heldItem && item) {
                 heldItem = {...item};
-                if(item.count === 1) {
-                    playerInv[index] = null;
-                } else {
-                    playerInv[index] = {...item, count: item.count - 1};
-                }
+                playerInv[index] = null;
                 renderInventory();
+                updateHeldItemDisplay();
             }
-            // Якщо тримаємо такий самий предмет - кладемо назад
-            else if(heldItem && !item) {
-                playerInv[index] = {...heldItem};
-                heldItem = null;
+            // Якщо тримаємо предмет
+            else if(heldItem) {
+                // Якщо слот порожній - кладемо весь стек
+                if(!item) {
+                    playerInv[index] = {...heldItem};
+                    heldItem = null;
+                }
+                // Якщо такий самий предмет - об'єднуємо
+                else if(item.id === heldItem.id) {
+                    let spaceLeft = item.maxStack - item.count;
+                    if(spaceLeft > 0) {
+                        let amountToPut = Math.min(spaceLeft, heldItem.count);
+                        item.count += amountToPut;
+                        heldItem.count -= amountToPut;
+                        
+                        if(heldItem.count <= 0) {
+                            heldItem = null;
+                        }
+                    }
+                }
+                // Якщо інший предмет - міняємо місцями
+                else {
+                    let temp = {...heldItem};
+                    heldItem = {...item};
+                    playerInv[index] = temp;
+                }
+                
                 renderInventory();
+                updateHeldItemDisplay();
             }
         }
 
@@ -308,24 +413,61 @@
                 currentSlot.style.backgroundImage = `url(${heldItem.texture})`;
                 currentSlot.classList.add('filled');
                 currentSlot.dataset.itemId = heldItem.id;
+                currentSlot.dataset.maxStack = heldItem.maxStack || 64;
                 heldItem = null;
                 renderInventory();
+                updateHeldItemDisplay();
                 updateOutput();
             }
             // Забрати предмет зі слоту
             else if(currentSlot.style.backgroundImage) {
                 let itemId = currentSlot.dataset.itemId;
+                let maxStack = parseInt(currentSlot.dataset.maxStack) || 64;
                 let itemName = itemId === 'log' ? 'Дуб' : itemId;
-                let itemTexture = currentSlot.style.backgroundImage.match(/url\("(.+?)"\)/)?.[1] || 
-                                  currentSlot.style.backgroundImage.match(/url\('(.+?)'\)/)?.[1] ||
-                                  currentSlot.style.backgroundImage.replace(/url\(|\)/g, '');
+                let itemTexture = currentSlot.style.backgroundImage.replace(/url\(|\)|"/g, '');
                 
-                currentSlot.style.backgroundImage = '';
-                currentSlot.classList.remove('filled');
-                delete currentSlot.dataset.itemId;
+                // Якщо рука пуста - беремо
+                if(!heldItem) {
+                    currentSlot.style.backgroundImage = '';
+                    currentSlot.classList.remove('filled');
+                    delete currentSlot.dataset.itemId;
+                    
+                    heldItem = { 
+                        id: itemId, 
+                        name: itemName, 
+                        texture: itemTexture, 
+                        count: 1,
+                        maxStack: maxStack
+                    };
+                }
+                // Якщо тримаємо такий самий - об'єднуємо
+                else if(heldItem.id === itemId) {
+                    let spaceLeft = heldItem.maxStack - heldItem.count;
+                    if(spaceLeft > 0) {
+                        // Забираємо зі слоту
+                        currentSlot.style.backgroundImage = '';
+                        currentSlot.classList.remove('filled');
+                        delete currentSlot.dataset.itemId;
+                        
+                        heldItem.count += 1;
+                    }
+                }
+                // Інакше - міняємо
+                else {
+                    currentSlot.style.backgroundImage = `url(${heldItem.texture})`;
+                    currentSlot.dataset.itemId = heldItem.id;
+                    
+                    heldItem = { 
+                        id: itemId, 
+                        name: itemName, 
+                        texture: itemTexture, 
+                        count: 1,
+                        maxStack: maxStack
+                    };
+                }
                 
-                heldItem = { id: itemId, name: itemName, texture: itemTexture, count: 1 };
                 renderInventory();
+                updateHeldItemDisplay();
                 updateOutput();
             }
         }
@@ -345,13 +487,13 @@
                     id: 'planks',
                     name: 'Дошка',
                     texture: 'https://grizly.club/uploads/posts/2023-01/1672853506_grizly-club-p-tekstura-dereva-pikselnaya-5.png',
-                    count: woodCount * 4
+                    count: woodCount * 4,
+                    maxStack: 64
                 };
                 
                 outputEl.style.backgroundImage = `url(${currentResult.texture})`;
                 outputEl.classList.add('active');
                 
-                // Видаляємо старий лічильник
                 let existingCount = outputEl.querySelector('.item-count');
                 if(existingCount) existingCount.remove();
                 
@@ -373,35 +515,38 @@
         function collectResult() {
             if(!currentResult) return;
             
-            // Знаходимо перший вільний слот або такий самий предмет
-            let targetSlot = -1;
+            // Шукаємо де покласти
+            let placed = false;
             
-            // Спочатку шукаємо такий самий предмет для стекування
+            // Спочатку намагаємось додати до існуючих
             for(let i=0; i<playerInv.length; i++) {
                 if(playerInv[i] && playerInv[i].id === currentResult.id) {
-                    targetSlot = i;
-                    break;
+                    let spaceLeft = playerInv[i].maxStack - playerInv[i].count;
+                    if(spaceLeft > 0) {
+                        let amountToAdd = Math.min(spaceLeft, currentResult.count);
+                        playerInv[i].count += amountToAdd;
+                        currentResult.count -= amountToAdd;
+                        
+                        if(currentResult.count <= 0) {
+                            placed = true;
+                            break;
+                        }
+                    }
                 }
             }
             
-            // Якщо не знайшли - шукаємо порожній
-            if(targetSlot === -1) {
+            // Якщо ще залишилось - шукаємо порожній слот
+            if(!placed && currentResult.count > 0) {
                 for(let i=0; i<playerInv.length; i++) {
                     if(!playerInv[i]) {
-                        targetSlot = i;
+                        playerInv[i] = {...currentResult};
+                        placed = true;
                         break;
                     }
                 }
             }
             
-            if(targetSlot !== -1) {
-                // Додаємо в інвентар
-                if(playerInv[targetSlot]) {
-                    playerInv[targetSlot].count += currentResult.count;
-                } else {
-                    playerInv[targetSlot] = {...currentResult};
-                }
-                
+            if(placed || currentResult.count <= 0) {
                 // Очищаємо сітку
                 clearGrid(false);
                 
@@ -410,7 +555,7 @@
                 currentResult = null;
                 collectBtn.disabled = true;
             } else {
-                alert('Інвентар заповнений!');
+                alert('Інвентар заповнений! Звільни місце.');
             }
         }
 
@@ -418,19 +563,39 @@
             let gridSlots = document.querySelectorAll('.slot');
             gridSlots.forEach(slot => {
                 if(slot.style.backgroundImage && saveToInventory) {
-                    // Повертаємо предмети в інвентар
                     let itemId = slot.dataset.itemId || 'unknown';
+                    let maxStack = parseInt(slot.dataset.maxStack) || 64;
                     let itemTexture = slot.style.backgroundImage.replace(/url\(|\)|"/g, '');
                     
-                    // Знаходимо вільний слот
-                    let freeSlot = playerInv.findIndex(item => !item);
-                    if(freeSlot !== -1) {
-                        playerInv[freeSlot] = {
-                            id: itemId,
-                            name: itemId === 'log' ? 'Дуб' : itemId,
-                            texture: itemTexture,
-                            count: 1
-                        };
+                    // Знаходимо вільний слот або об'єднуємо
+                    let placed = false;
+                    
+                    // Спроба об'єднати
+                    for(let i=0; i<playerInv.length; i++) {
+                        if(playerInv[i] && playerInv[i].id === itemId) {
+                            let spaceLeft = playerInv[i].maxStack - playerInv[i].count;
+                            if(spaceLeft > 0) {
+                                playerInv[i].count += 1;
+                                placed = true;
+                                break;
+                            }
+                        }
+                    }
+                    
+                    // Якщо не вдалось - шукаємо порожній
+                    if(!placed) {
+                        for(let i=0; i<playerInv.length; i++) {
+                            if(!playerInv[i]) {
+                                playerInv[i] = {
+                                    id: itemId,
+                                    name: itemId === 'log' ? 'Дуб' : itemId,
+                                    texture: itemTexture,
+                                    count: 1,
+                                    maxStack: maxStack
+                                };
+                                break;
+                            }
+                        }
                     }
                 }
                 
