@@ -338,7 +338,7 @@
             { id: 'apple', name: 'Яблуко', texture: 'https://example.com/apple.png', maxStack: 64 }
         ];
 
-        // 🎒 ІНВЕНТАР ГРАВЦЯ
+        // 🎒 ІНВЕНТАР ГРАВЦЯ (10 СЛОТІВ)
         const MAX_STACK = {
             'log': 64, 'planks': 64, 'stick': 64, 'cobble': 64,
             'iron': 64, 'diamond': 64, 'coal': 64, 'apple': 64,
@@ -346,11 +346,7 @@
         };
 
         let heldItem = null;
-        let playerInv = [
-            null, null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null, null,
-            null, null, null, null, null, null, null, null, null, null
-        ];
+        let playerInv = [null, null, null, null, null, null, null, null, null, null]; // 10 слотів
 
         // 📜 РЕЦЕПТИ
         const recipes = {
@@ -396,7 +392,7 @@
             return MAX_STACK[itemId] || 64;
         }
 
-        // Відображення інвентарю
+        // Відображення інвентарю (10 слотів)
         function renderInventory() {
             inventoryEl.innerHTML = '';
             playerInv.forEach((item, index) => {
@@ -437,7 +433,6 @@
         // Взяти предмет з панелі (креативний режим)
         function takeItemFromPanel(item) {
             if(!heldItem) {
-                // Беремо новий предмет з панелі (повний стек)
                 heldItem = {
                     ...item,
                     count: item.maxStack
@@ -445,14 +440,12 @@
                 renderInventory();
                 updateHeldItemDisplay();
             } else if(heldItem.id === item.id) {
-                // Якщо тримаємо такий самий - додаємо ще (якщо місце є)
                 let spaceLeft = heldItem.maxStack - heldItem.count;
                 if(spaceLeft > 0) {
                     heldItem.count += spaceLeft;
                     updateHeldItemDisplay();
                 }
             } else {
-                // Міняємо на інший предмет
                 heldItem = {
                     ...item,
                     count: item.maxStack
