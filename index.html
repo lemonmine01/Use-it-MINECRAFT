@@ -63,6 +63,7 @@
             cursor: pointer;
             background-size: cover;
             image-rendering: pixelated;
+            position: relative;
         }
 
         .slot:hover { 
@@ -91,10 +92,16 @@
             cursor: pointer;
             background-size: cover;
             image-rendering: pixelated;
+            position: relative;
+        }
+
+        .result-slot:hover { 
+            filter: brightness(1.3);
         }
 
         .result-slot.active { 
             background-color: #fff;
+            box-shadow: 0 0 10px gold;
         }
 
         .player-inventory {
@@ -142,6 +149,41 @@
             font-weight: bold;
             pointer-events: none;
         }
+
+        .controls {
+            margin-top: 15px;
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .btn {
+            background: #7a7a7a;
+            color: white;
+            border: 2px solid #000;
+            border-top-color: #aaa;
+            border-left-color: #aaa;
+            padding: 8px 20px;
+            font-family: 'VT323', monospace;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        .btn:hover {
+            background: #8a8a8a;
+        }
+
+        .btn:active {
+            border-top-color: #000;
+            border-left-color: #000;
+            border-bottom-color: #aaa;
+            border-right-color: #aaa;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
@@ -154,33 +196,49 @@
             
             <div class="arrow">➡️</div>
             
-            <div class="result-slot" id="output"></div>
+            <div class="result-slot" id="output" onclick="collectResult()"></div>
+        </div>
+
+        <div class="controls">
+            <button class="btn" onclick="clearGrid()">🗑️ Очистити</button>
+            <button class="btn" id="collectBtn" onclick="collectResult()" disabled>🎁 Забрати</button>
         </div>
     </div>
 
     <div class="player-inventory" id="inventory"></div>
 
     <script>
-        // 🎒 Інвентар
+        // 🎒 ІНВЕНТАР
         let heldItem = null;
         let playerInv = [
             { id: 'log', name: 'Дуб', texture: 'https://abrakadabra.fun/uploads/posts/2021-12/1639881942_8-abrakadabra-fun-p-doski-mainkraft-tekstura-8.png', count: 64 },
-            null, null, null, null, null, null, null
+            null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null, null,
+            null, null, null, null, null, null, null, null, null, null
         ];
 
-        // 📜 Рецепти
+        // 📜 РЕЦЕПТИ
         const recipes = {
             'log_to_planks': {
                 input: 'log',
                 output: { id: 'planks', name: 'Дошка', texture: 'https://grizly.club/uploads/posts/2023-01/1672853506_grizly-club-p-tekstura-dereva-pikselnaya-5.png', count: 4 },
                 shapeless: true
+            },
+            'planks_to_sticks': {
+                input: 'planks',
+                output: { id: 'stick', name: 'Палички', texture: 'https://example.com/stick.png', count: 4 },
+                shapeless: true
             }
         };
+
+        // Поточний результат
+        let currentResult = null;
 
         // --- ІНІЦІАЛІЗАЦІЯ ---
         const gridEl = document.getElementById('grid');
         const outputEl = document.getElementById('output');
         const inventoryEl = document.getElementById('inventory');
+        const collectBtn = document.getElementById('collectBtn');
 
         // Створення сітки
         for(let i=0; i<9; i++) {
@@ -226,7 +284,17 @@
             
             if(!heldItem && item) {
                 heldItem = {...item};
-                playerInv[index] = null;
+                if(item.count === 1) {
+                    playerInv[index] = null;
+                } else {
+                    playerInv[index] = {...item, count: item.count - 1};
+                }
+                renderInventory();
+            }
+            // Якщо тримаємо такий самий предмет - кладемо назад
+            else if(heldItem && !item) {
+                playerInv[index] = {...heldItem};
+                heldItem = null;
                 renderInventory();
             }
         }
@@ -235,17 +303,28 @@
             let gridSlots = document.querySelectorAll('.slot');
             let currentSlot = gridSlots[index];
             
-            if(heldItem && !currentSlot.style.backgroundImage && heldItem.id === 'log') {
+            // Якщо тримаємо предмет і слот порожній
+            if(heldItem && !currentSlot.style.backgroundImage) {
                 currentSlot.style.backgroundImage = `url(${heldItem.texture})`;
                 currentSlot.classList.add('filled');
+                currentSlot.dataset.itemId = heldItem.id;
                 heldItem = null;
                 renderInventory();
                 updateOutput();
             }
+            // Забрати предмет зі слоту
             else if(currentSlot.style.backgroundImage) {
+                let itemId = currentSlot.dataset.itemId;
+                let itemName = itemId === 'log' ? 'Дуб' : itemId;
+                let itemTexture = currentSlot.style.backgroundImage.match(/url\("(.+?)"\)/)?.[1] || 
+                                  currentSlot.style.backgroundImage.match(/url\('(.+?)'\)/)?.[1] ||
+                                  currentSlot.style.backgroundImage.replace(/url\(|\)/g, '');
+                
                 currentSlot.style.backgroundImage = '';
                 currentSlot.classList.remove('filled');
-                heldItem = { id: 'log', name: 'Дуб', texture: 'https://abrakadabra.fun/uploads/posts/2021-12/1639881942_8-abrakadabra-fun-p-doski-mainkraft-tekstura-8.png', count: 1 };
+                delete currentSlot.dataset.itemId;
+                
+                heldItem = { id: itemId, name: itemName, texture: itemTexture, count: 1 };
                 renderInventory();
                 updateOutput();
             }
@@ -256,27 +335,114 @@
             let woodCount = 0;
 
             gridSlots.forEach(slot => {
-                if(slot.style.backgroundImage.includes('doski-mainkraft')) {
+                if(slot.dataset.itemId === 'log') {
                     woodCount++;
                 }
             });
 
             if(woodCount > 0) {
-                outputEl.style.backgroundImage = `url(https://grizly.club/uploads/posts/2023-01/1672853506_grizly-club-p-tekstura-dereva-pikselnaya-5.png)`;
+                currentResult = {
+                    id: 'planks',
+                    name: 'Дошка',
+                    texture: 'https://grizly.club/uploads/posts/2023-01/1672853506_grizly-club-p-tekstura-dereva-pikselnaya-5.png',
+                    count: woodCount * 4
+                };
+                
+                outputEl.style.backgroundImage = `url(${currentResult.texture})`;
                 outputEl.classList.add('active');
                 
+                // Видаляємо старий лічильник
                 let existingCount = outputEl.querySelector('.item-count');
                 if(existingCount) existingCount.remove();
                 
                 let count = document.createElement('span');
                 count.className = 'item-count';
-                count.textContent = '×' + (woodCount * 4);
+                count.textContent = '×' + currentResult.count;
                 outputEl.appendChild(count);
+                
+                collectBtn.disabled = false;
             } else {
+                currentResult = null;
                 outputEl.style.backgroundImage = '';
                 outputEl.classList.remove('active');
                 outputEl.innerHTML = '';
+                collectBtn.disabled = true;
             }
+        }
+
+        function collectResult() {
+            if(!currentResult) return;
+            
+            // Знаходимо перший вільний слот або такий самий предмет
+            let targetSlot = -1;
+            
+            // Спочатку шукаємо такий самий предмет для стекування
+            for(let i=0; i<playerInv.length; i++) {
+                if(playerInv[i] && playerInv[i].id === currentResult.id) {
+                    targetSlot = i;
+                    break;
+                }
+            }
+            
+            // Якщо не знайшли - шукаємо порожній
+            if(targetSlot === -1) {
+                for(let i=0; i<playerInv.length; i++) {
+                    if(!playerInv[i]) {
+                        targetSlot = i;
+                        break;
+                    }
+                }
+            }
+            
+            if(targetSlot !== -1) {
+                // Додаємо в інвентар
+                if(playerInv[targetSlot]) {
+                    playerInv[targetSlot].count += currentResult.count;
+                } else {
+                    playerInv[targetSlot] = {...currentResult};
+                }
+                
+                // Очищаємо сітку
+                clearGrid(false);
+                
+                // Оновлюємо
+                renderInventory();
+                currentResult = null;
+                collectBtn.disabled = true;
+            } else {
+                alert('Інвентар заповнений!');
+            }
+        }
+
+        function clearGrid(saveToInventory = true) {
+            let gridSlots = document.querySelectorAll('.slot');
+            gridSlots.forEach(slot => {
+                if(slot.style.backgroundImage && saveToInventory) {
+                    // Повертаємо предмети в інвентар
+                    let itemId = slot.dataset.itemId || 'unknown';
+                    let itemTexture = slot.style.backgroundImage.replace(/url\(|\)|"/g, '');
+                    
+                    // Знаходимо вільний слот
+                    let freeSlot = playerInv.findIndex(item => !item);
+                    if(freeSlot !== -1) {
+                        playerInv[freeSlot] = {
+                            id: itemId,
+                            name: itemId === 'log' ? 'Дуб' : itemId,
+                            texture: itemTexture,
+                            count: 1
+                        };
+                    }
+                }
+                
+                slot.style.backgroundImage = '';
+                slot.classList.remove('filled');
+                delete slot.dataset.itemId;
+            });
+            
+            if(saveToInventory) {
+                renderInventory();
+            }
+            updateOutput();
         }
     </script>
 </body>
