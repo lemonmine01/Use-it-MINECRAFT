@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Minecraft Crafting Suite</title>
+    <title>Minecraft Crafting</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
 
         * { box-sizing: border-box; user-select: none; }
         body {
-            background: #202020; /* Темний фон як в грі */
+            background: #1a1a1a;
             font-family: 'VT323', monospace;
             color: white;
             display: flex;
@@ -20,9 +20,12 @@
             margin: 0;
         }
 
-        h1 { font-size: 40px; margin-bottom: 10px; text-shadow: 4px 4px 0 #000; }
+        h1 { 
+            font-size: 40px; 
+            margin-bottom: 20px; 
+            text-shadow: 3px 3px 0 #000;
+        }
 
-        /* --- ГОЛОВНИЙ КОНТЕЙНЕР --- */
         .crafting-container {
             background: #c6c6c6;
             border: 4px solid #000;
@@ -31,163 +34,145 @@
             border-bottom-color: #555;
             border-right-color: #555;
             padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
 
-        /* --- ВКЛАДКИ (МЕНЮ ЗЛІВА) --- */
-        .tabs {
-            display: flex;
-            gap: 5px;
-            margin-bottom: 15px;
-        }
-        .tab {
-            padding: 5px 15px;
-            background: #8b8b8b;
-            border: 2px solid #373737;
-            border-top-color: #fff;
-            border-left-color: #fff;
-            color: #404040;
-            cursor: pointer;
-            font-size: 20px;
-        }
-        .tab.active {
-            background: #c6c6c6;
-            color: #101010;
-            font-weight: bold;
-        }
-
-        /* --- ОБЛАСТЬ КРАФТУ --- */
         .workbench-area {
             display: flex;
             align-items: center;
             gap: 15px;
         }
 
-        /* --- СІТКА 3x3 --- */
         .grid-3x3 {
             display: grid;
-            grid-template-columns: repeat(3, 54px);
-            grid-template-rows: repeat(3, 54px);
+            grid-template-columns: repeat(3, 64px);
+            grid-template-rows: repeat(3, 64px);
             gap: 2px;
-            background: #c6c6c6;
         }
 
         .slot {
-            width: 54px;
-            height: 54px;
+            width: 64px;
+            height: 64px;
             background: #8b8b8b;
-            border: 2px solid #373737;
+            border: 3px solid #373737;
             border-top-color: #fff;
             border-left-color: #fff;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 30px;
             cursor: pointer;
+            background-size: cover;
+            image-rendering: pixelated;
         }
-        .slot:hover { background: #a0a0a0; }
-        .slot.filled { background: #ffffff; }
 
-        /* --- СТРІЛКА ТА РЕЗУЛЬТАТ --- */
-        .arrow { font-size: 30px; color: #404040; }
-        
+        .slot:hover { 
+            filter: brightness(1.2); 
+        }
+
+        .slot.filled { 
+            border-color: #fff;
+        }
+
+        .arrow { 
+            font-size: 40px; 
+            color: #404040;
+        }
+
         .result-slot {
-            width: 60px;
-            height: 60px;
+            width: 70px;
+            height: 70px;
             background: #8b8b8b;
-            border: 2px solid #373737;
+            border: 3px solid #373737;
             border-top-color: #fff;
             border-left-color: #fff;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 36px;
             cursor: pointer;
+            background-size: cover;
+            image-rendering: pixelated;
         }
-        .result-slot.active { background: #fff; }
-        .result-label { text-align: center; color: #404040; font-size: 18px; margin-top: 5px; }
 
-        /* --- ІНВЕНТАР ГРАВЦЯ --- */
+        .result-slot.active { 
+            background-color: #fff;
+        }
+
         .player-inventory {
             margin-top: 20px;
             display: flex;
             gap: 5px;
             background: #c6c6c6;
-            padding: 5px;
+            padding: 10px;
             border: 4px solid #000;
             border-top-color: #fff;
             border-left-color: #fff;
         }
 
         .inv-slot {
-            width: 44px;
-            height: 44px;
+            width: 54px;
+            height: 54px;
             background: #8b8b8b;
-            border: 2px solid #373737;
+            border: 3px solid #373737;
             border-top-color: #fff;
             border-left-color: #fff;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 22px;
             cursor: pointer;
+            background-size: cover;
+            image-rendering: pixelated;
+            position: relative;
         }
-        .inv-slot:hover { background: #a0a0a0; }
-        .inv-slot.selected { border-color: #ff00ff; background: #fff; }
 
+        .inv-slot:hover { 
+            filter: brightness(1.2); 
+        }
+
+        .inv-slot.selected { 
+            border: 3px solid #ff00ff;
+        }
+
+        .item-count {
+            position: absolute;
+            bottom: 2px;
+            right: 4px;
+            color: #fff;
+            text-shadow: 2px 2px 0 #000;
+            font-size: 18px;
+            font-weight: bold;
+            pointer-events: none;
+        }
     </style>
 </head>
 <body>
 
-    <h1>⛏️ Майстерня</h1>
+    <h1>⛏️ Crafting Table</h1>
 
     <div class="crafting-container">
-        <!-- Вкладки меню -->
-        <div class="tabs">
-            <div class="tab active">Верстак</div>
-            <div class="tab" style="opacity: 0.5; cursor: not-allowed;">Піч</div>
-            <div class="tab" style="opacity: 0.5; cursor: not-allowed;">Наковальня</div>
-        </div>
-
-        <!-- Область крафту -->
         <div class="workbench-area">
-            <div class="grid-3x3" id="grid">
-                <!-- JS згенерує 9 слотів -->
-            </div>
+            <div class="grid-3x3" id="grid"></div>
             
             <div class="arrow">➡️</div>
             
-            <div style="display: flex; flex-direction: column; align-items: center;">
-                <div class="result-slot" id="output">
-                    <!-- Сюди впаде результат -->
-                </div>
-                <div class="result-label" id="outputName">?</div>
-            </div>
+            <div class="result-slot" id="output"></div>
         </div>
     </div>
 
-    <!-- Інвентар гравця -->
-    <div class="player-inventory" id="inventory">
-        <!-- JS згенерує слоти інвентарю -->
-    </div>
+    <div class="player-inventory" id="inventory"></div>
 
     <script>
-        // 🎒 ДАНІ ГРАВЦЯ
-        let heldItem = null; // Що тримаємо в руці
+        // 🎒 Інвентар
+        let heldItem = null;
         let playerInv = [
-            { id: 'log', icon: '🪵', name: 'Дерево' },
-            null, null, null, null, null, null, null // Інші слоти порожні
+            { id: 'log', name: 'Дуб', texture: 'https://abrakadabra.fun/uploads/posts/2021-12/1639881942_8-abrakadabra-fun-p-doski-mainkraft-tekstura-8.png', count: 64 },
+            null, null, null, null, null, null, null
         ];
 
-        // 🛠 РЕЦЕПТИ (База даних)
+        // 📜 Рецепти
         const recipes = {
-            // Дерево -> Дошки (Shapeless: можна класти де завгодно)
-            'wood_to_planks': {
+            'log_to_planks': {
                 input: 'log',
-                output: { id: 'planks', icon: '🟫', name: 'Дошки', count: 4 },
+                output: { id: 'planks', name: 'Дошка', texture: 'https://grizly.club/uploads/posts/2023-01/1672853506_grizly-club-p-tekstura-dereva-pikselnaya-5.png', count: 4 },
                 shapeless: true
             }
         };
@@ -195,10 +180,9 @@
         // --- ІНІЦІАЛІЗАЦІЯ ---
         const gridEl = document.getElementById('grid');
         const outputEl = document.getElementById('output');
-        const outputNameEl = document.getElementById('outputName');
         const inventoryEl = document.getElementById('inventory');
 
-        // Створюємо сітку 3x3
+        // Створення сітки
         for(let i=0; i<9; i++) {
             let slot = document.createElement('div');
             slot.className = 'slot';
@@ -207,15 +191,27 @@
             gridEl.appendChild(slot);
         }
 
-        // Створюємо інвентар
+        // Відображення інвентарю
         function renderInventory() {
             inventoryEl.innerHTML = '';
             playerInv.forEach((item, index) => {
                 let slot = document.createElement('div');
                 slot.className = 'inv-slot';
-                if(heldItem && heldItem.id === item?.id) slot.classList.add('selected'); // Підсвітка
                 
-                slot.innerHTML = item ? item.icon : '';
+                if(item) {
+                    slot.style.backgroundImage = `url(${item.texture})`;
+                    if(item.count > 1) {
+                        let count = document.createElement('span');
+                        count.className = 'item-count';
+                        count.textContent = item.count;
+                        slot.appendChild(count);
+                    }
+                }
+                
+                if(heldItem && heldItem.id === item?.id) {
+                    slot.classList.add('selected');
+                }
+                
                 slot.onclick = () => handleInventoryClick(index);
                 inventoryEl.appendChild(slot);
             });
@@ -224,68 +220,64 @@
         renderInventory();
         updateOutput();
 
-        // --- ЛОГІКА КЛІКІВ ---
-
+        // --- ЛОГІКА ---
         function handleInventoryClick(index) {
             let item = playerInv[index];
             
-            // Якщо тримаємо нічого -> беремо з інвентарю
             if(!heldItem && item) {
-                heldItem = item;
-                playerInv[index] = null; // Забираємо з інвентарю
+                heldItem = {...item};
+                playerInv[index] = null;
                 renderInventory();
-            }
-            // Якщо тримаємо предмет -> кладемо назад (поки що просто скидаємо)
-            else if(heldItem && !item) {
-                 // Успрощена логіка: просто скидаємо в руку, в інвентар поки не повертаємо складно
             }
         }
 
         function handleGridClick(index) {
             let gridSlots = document.querySelectorAll('.slot');
-            let currentGridItem = gridSlots[index].innerHTML ? 'log' : null;
-
-            // 1. Якщо в руці є предмет (Дерево) і слот порожній -> кладемо
-            if(heldItem && heldItem.id === 'log' && !currentGridItem) {
-                gridSlots[index].innerHTML = heldItem.icon;
-                gridSlots[index].classList.add('filled');
-                heldItem = null; // Рука пуста
+            let currentSlot = gridSlots[index];
+            
+            if(heldItem && !currentSlot.style.backgroundImage && heldItem.id === 'log') {
+                currentSlot.style.backgroundImage = `url(${heldItem.texture})`;
+                currentSlot.classList.add('filled');
+                heldItem = null;
                 renderInventory();
                 updateOutput();
             }
-            // 2. Якщо слот має предмет -> забираємо назад в руку
-            else if(currentGridItem) {
-                gridSlots[index].innerHTML = '';
-                gridSlots[index].classList.remove('filled');
-                heldItem = { id: 'log', icon: '🪵' };
+            else if(currentSlot.style.backgroundImage) {
+                currentSlot.style.backgroundImage = '';
+                currentSlot.classList.remove('filled');
+                heldItem = { id: 'log', name: 'Дуб', texture: 'https://abrakadabra.fun/uploads/posts/2021-12/1639881942_8-abrakadabra-fun-p-doski-mainkraft-tekstura-8.png', count: 1 };
                 renderInventory();
                 updateOutput();
             }
         }
 
-        // --- ПЕРЕВІРКА РЕЦЕПТІВ ---
         function updateOutput() {
             let gridSlots = document.querySelectorAll('.slot');
-            let gridItems = [];
             let woodCount = 0;
 
             gridSlots.forEach(slot => {
-                if(slot.innerHTML === '🪵') woodCount++;
+                if(slot.style.backgroundImage.includes('doski-mainkraft')) {
+                    woodCount++;
+                }
             });
 
-            // Перевірка рецепту "Дерево -> Дошки"
             if(woodCount > 0) {
-                // Знайдено дерево!
-                outputEl.innerHTML = '🟫'; // Дошки
-                outputNameEl.innerHTML = 'Дошки x' + (woodCount * 4);
+                outputEl.style.backgroundImage = `url(https://grizly.club/uploads/posts/2023-01/1672853506_grizly-club-p-tekstura-dereva-pikselnaya-5.png)`;
                 outputEl.classList.add('active');
+                
+                let existingCount = outputEl.querySelector('.item-count');
+                if(existingCount) existingCount.remove();
+                
+                let count = document.createElement('span');
+                count.className = 'item-count';
+                count.textContent = '×' + (woodCount * 4);
+                outputEl.appendChild(count);
             } else {
-                outputEl.innerHTML = '';
-                outputNameEl.innerHTML = '?';
+                outputEl.style.backgroundImage = '';
                 outputEl.classList.remove('active');
+                outputEl.innerHTML = '';
             }
         }
-
     </script>
 </body>
 </html>
